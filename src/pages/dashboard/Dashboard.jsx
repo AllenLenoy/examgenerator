@@ -2,52 +2,41 @@ import { useState } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  FileText, 
-  Upload, 
-  ClipboardList, 
-  Users, 
-  BarChart3,
+import {
+  FileText,
+  ClipboardList,
   LogOut,
   Menu,
-  X,
   Home,
-  BookOpen,
-  Send
+  BookOpen
 } from 'lucide-react';
-import { QuestionForm } from '@/components/questions/QuestionForm';
-import { QuestionList } from '@/components/questions/QuestionList';
 import { ExamGenerator } from '@/components/exam/ExamGenerator';
 import { ExamPreview } from '@/components/exam/ExamPreview';
 import { useQuestionBank } from '@/context/QuestionBankContext';
 
 const navItems = [
-  { label: 'Overview', icon: Home, path: '/dashboard/teacher' },
-  { label: 'Question Bank', icon: BookOpen, path: '/dashboard/teacher/questions' },
-  { label: 'Create Exam', icon: ClipboardList, path: '/dashboard/teacher/create-exam' },
-  { label: 'My Exams', icon: FileText, path: '/dashboard/teacher/exams' },
-  { label: 'Students', icon: Users, path: '/dashboard/teacher/students' },
-  { label: 'Analytics', icon: BarChart3, path: '/dashboard/teacher/analytics' },
+  { label: 'Overview', icon: Home, path: '/dashboard' },
+  { label: 'Create Exam', icon: ClipboardList, path: '/dashboard/create-exam' },
+  { label: 'My Exams', icon: FileText, path: '/dashboard/exams' },
 ];
 
-function TeacherOverview() {
+function DashboardOverview() {
   const { questions, exams, getCategories } = useQuestionBank();
-  
+
   const stats = [
     { label: 'Total Questions', value: questions.length, icon: BookOpen },
     { label: 'Exams Created', value: exams.length, icon: FileText },
     { label: 'Categories', value: getCategories().length, icon: ClipboardList },
-    { label: 'Students Assigned', value: 0, icon: Users },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Welcome back, Teacher!</h1>
+        <h1 className="text-3xl font-bold text-foreground">Welcome back!</h1>
         <p className="text-muted-foreground mt-1">Here's an overview of your exam management</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat) => (
           <Card key={stat.label}>
             <CardContent className="flex items-center gap-4 p-6">
@@ -70,21 +59,9 @@ function TeacherOverview() {
           </CardHeader>
           <CardContent className="space-y-3">
             <Button asChild className="w-full justify-start" variant="outline">
-              <Link to="/dashboard/teacher/questions">
-                <BookOpen className="mr-2 h-4 w-4" />
-                Add Questions
-              </Link>
-            </Button>
-            <Button asChild className="w-full justify-start" variant="outline">
-              <Link to="/dashboard/teacher/create-exam">
+              <Link to="/dashboard/create-exam">
                 <ClipboardList className="mr-2 h-4 w-4" />
                 Create New Exam
-              </Link>
-            </Button>
-            <Button asChild className="w-full justify-start" variant="outline">
-              <Link to="/dashboard/teacher/students">
-                <Send className="mr-2 h-4 w-4" />
-                Assign Test to Students
               </Link>
             </Button>
           </CardContent>
@@ -114,42 +91,18 @@ function TeacherOverview() {
   );
 }
 
-function QuestionBankPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Question Bank</h1>
-        <p className="text-muted-foreground mt-1">Add and manage your questions</p>
-      </div>
-      <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
-        <QuestionForm />
-        <QuestionList />
-      </div>
-    </div>
-  );
-}
-
 function CreateExamPage() {
-  const { exams } = useQuestionBank();
-  const latestExam = exams[exams.length - 1];
-
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Create Exam</h1>
-        <p className="text-muted-foreground mt-1">Generate a randomized exam paper</p>
-      </div>
-      <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
-        <ExamGenerator />
-        {latestExam && <ExamPreview exam={latestExam} />}
-      </div>
+      {/* Header is inside ExamGenerator now, but keeping container is fine */}
+      <ExamGenerator />
     </div>
   );
 }
 
 function MyExamsPage() {
   const { exams } = useQuestionBank();
-  
+
   return (
     <div className="space-y-6">
       <div>
@@ -162,7 +115,7 @@ function MyExamsPage() {
             <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No exams created yet.</p>
             <Button asChild className="mt-4">
-              <Link to="/dashboard/teacher/create-exam">Create Your First Exam</Link>
+              <Link to="/dashboard/create-exam">Create Your First Exam</Link>
             </Button>
           </CardContent>
         </Card>
@@ -181,7 +134,6 @@ function MyExamsPage() {
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button size="sm" variant="outline">View</Button>
-                  <Button size="sm" variant="outline">Assign</Button>
                 </div>
               </CardContent>
             </Card>
@@ -192,42 +144,7 @@ function MyExamsPage() {
   );
 }
 
-function StudentsPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Students</h1>
-        <p className="text-muted-foreground mt-1">Manage and assign tests to students</p>
-      </div>
-      <Card>
-        <CardContent className="p-12 text-center">
-          <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">No students added yet.</p>
-          <p className="text-sm text-muted-foreground mt-2">Connect a backend to manage students.</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function AnalyticsPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Analytics</h1>
-        <p className="text-muted-foreground mt-1">View performance insights</p>
-      </div>
-      <Card>
-        <CardContent className="p-12 text-center">
-          <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Analytics will be available once students complete exams.</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-export default function TeacherDashboard() {
+export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
@@ -241,21 +158,19 @@ export default function TeacherDashboard() {
           </div>
           <span className="text-lg font-semibold text-foreground">ExamGen</span>
         </div>
-        
+
         <nav className="p-4 space-y-1">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path || 
-              (item.path !== '/dashboard/teacher' && location.pathname.startsWith(item.path));
+            const isActive = location.pathname === item.path;
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive 
-                    ? 'bg-primary/10 text-primary' 
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
               >
                 <item.icon className="h-4 w-4" />
                 {item.label}
@@ -276,7 +191,7 @@ export default function TeacherDashboard() {
 
       {/* Overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -301,12 +216,9 @@ export default function TeacherDashboard() {
 
         <main className="flex-1 p-4 lg:p-6">
           <Routes>
-            <Route index element={<TeacherOverview />} />
-            <Route path="questions" element={<QuestionBankPage />} />
+            <Route index element={<DashboardOverview />} />
             <Route path="create-exam" element={<CreateExamPage />} />
             <Route path="exams" element={<MyExamsPage />} />
-            <Route path="students" element={<StudentsPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
           </Routes>
         </main>
       </div>

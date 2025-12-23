@@ -24,31 +24,81 @@ export default function Auth() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate login - will be replaced with actual auth later
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Import API service
+      const { authAPI } = await import('@/lib/apiService');
+
+      // Call real login API
+      const response = await authAPI.login({
+        email: loginEmail,
+        password: loginPassword
+      });
+
+      // Store token and user info
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+
       toast({
         title: 'Login successful!',
-        description: 'Redirecting to dashboard...',
+        description: `Welcome back, ${response.data.user.name}!`,
       });
-      // For now, redirect based on a demo role
-      // In production, this would come from the auth response
-      navigate('/dashboard/teacher');
-    }, 1000);
+
+      // Route based on user role
+      const { role } = response.data.user;
+      if (role === 'student') {
+        navigate('/dashboard/student');
+      } else if (role === 'admin') {
+        navigate('/dashboard/admin');
+      } else {
+        navigate('/dashboard');
+      }
+
+    } catch (error) {
+      toast({
+        title: 'Login failed',
+        description: error.response?.data?.error || 'Invalid email or password',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate signup - will be replaced with actual auth later
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Import API service
+      const { authAPI } = await import('@/lib/apiService');
+
+      // Call real register API
+      await authAPI.register({
+        name: signupName,
+        email: signupEmail,
+        password: signupPassword,
+        role: signupRole
+      });
+
       toast({
         title: 'Account created!',
         description: 'Please log in to continue.',
       });
-    }, 1000);
+
+      // Clear form
+      setSignupName('');
+      setSignupEmail('');
+      setSignupPassword('');
+
+    } catch (error) {
+      toast({
+        title: 'Registration failed',
+        description: error.response?.data?.error || 'Could not create account',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

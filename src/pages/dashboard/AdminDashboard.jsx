@@ -1,34 +1,85 @@
-import { useState } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  FileText, 
-  Users, 
+import {
+  FileText,
+  Users,
   BarChart3,
   LogOut,
   Menu,
   Home,
   Settings,
   Shield,
-  GraduationCap
+  GraduationCap,
+  UserPlus,
+  Search,
+  X
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { adminAPI } from '@/lib/apiService';
 
 const navItems = [
   { label: 'Overview', icon: Home, path: '/dashboard/admin' },
-  { label: 'Teachers', icon: GraduationCap, path: '/dashboard/admin/teachers' },
-  { label: 'Students', icon: Users, path: '/dashboard/admin/students' },
-  { label: 'Reports', icon: BarChart3, path: '/dashboard/admin/reports' },
-  { label: 'Settings', icon: Settings, path: '/dashboard/admin/settings' },
+  { label: 'Users', icon: Users, path: '/dashboard/admin/users' },
+  { label: 'System', icon: Settings, path: '/dashboard/admin/system' },
 ];
 
 function AdminOverview() {
-  const stats = [
-    { label: 'Total Teachers', value: 0, icon: GraduationCap },
-    { label: 'Total Students', value: 0, icon: Users },
-    { label: 'Total Exams', value: 0, icon: FileText },
-    { label: 'Active Tests', value: 0, icon: Shield },
-  ];
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchDashboard();
+  }, []);
+
+  const fetchDashboard = async () => {
+    try {
+      const response = await adminAPI.getDashboard();
+      setDashboardData(response.data);
+    } catch (error) {
+      toast({
+        title: 'Error loading dashboard',
+        description: error.response?.data?.error || 'Could not fetch dashboard data',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const stats = dashboardData ? [
+    { label: 'Total Teachers', value: dashboardData.users.teachers, icon: GraduationCap },
+    { label: 'Total Students', value: dashboardData.users.students, icon: Users },
+    { label: 'Total Exams', value: dashboardData.system.exams, icon: FileText },
+    { label: 'Total Questions', value: dashboardData.system.questions, icon: Shield },
+  ] : [];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Loading dashboard...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -56,13 +107,26 @@ function AdminOverview() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle>Recent Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8">
-              <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No recent activity.</p>
-            </div>
+            {dashboardData?.recentUsers?.length > 0 ? (
+              <div className="space-y-2">
+                {dashboardData.recentUsers.slice(0, 5).map((user) => (
+                  <div key={user._id} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div>
+                      <p className="font-medium">{user.name}</p>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                    </div>
+                    <span className="text-xs bg-primary/10 px-2 py-1 rounded">{user.role}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No recent registrations
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -74,15 +138,19 @@ function AdminOverview() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Database</span>
-                <span className="text-sm text-yellow-500">Not Connected</span>
+                <span className="text-sm text-green-500">Connected</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Authentication</span>
-                <span className="text-sm text-yellow-500">Demo Mode</span>
+                <span className="text-sm text-green-500">Active</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Storage</span>
-                <span className="text-sm text-yellow-500">Not Configured</span>
+                <span className="text-sm text-muted-foreground">Total Users</span>
+                <span className="text-sm font-medium">{dashboardData?.users?.total || 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Inactive Users</span>
+                <span className="text-sm text-yellow-600">{dashboardData?.users?.inactive || 0}</span>
               </div>
             </div>
           </CardContent>
@@ -92,158 +160,406 @@ function AdminOverview() {
   );
 }
 
-function TeachersPage() {
+function UsersPage() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  // New user form
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'student'
+  });
+
+  useEffect(() => {
+    fetchUsers();
+  }, [filter, search]);
+
+  const fetchUsers = async () => {
+    try {
+      const params = {};
+      if (filter !== 'all') params.role = filter;
+      if (search) params.search = search;
+
+      const response = await adminAPI.getUsers(params);
+      setUsers(response.data.users);
+    } catch (error) {
+      toast({
+        title: 'Error loading users',
+        description: error.response?.data?.error || 'Could not fetch users',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    try {
+      await adminAPI.createUser(newUser);
+      toast({
+        title: 'User created',
+        description: `${newUser.name} has been added successfully`
+      });
+      setCreateDialogOpen(false);
+      setNewUser({ name: '', email: '', password: '', role: 'student' });
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: 'Error creating user',
+        description: error.response?.data?.error || 'Could not create user',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleToggleStatus = async (userId) => {
+    try {
+      await adminAPI.toggleUserStatus(userId);
+      toast({
+        title: 'User status updated',
+        description: 'User status has been changed'
+      });
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.error || 'Could not update user status',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!confirm('Are you sure you want to deactivate this user?')) return;
+
+    try {
+      await adminAPI.deleteUser(userId);
+      toast({
+        title: 'User deactivated',
+        description: 'User has been deactivated'
+      });
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.error || 'Could not delete user',
+        variant: 'destructive'
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Teachers</h1>
-        <p className="text-muted-foreground mt-1">Manage teacher accounts</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">User Management</h1>
+          <p className="text-muted-foreground mt-1">Manage all users in the system</p>
+        </div>
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add User
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New User</DialogTitle>
+              <DialogDescription>Add a new user to the system</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div>
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="role">Role</Label>
+                <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="teacher">Teacher</SelectItem>
+                    <SelectItem value="student">Student</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Create User</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
+
+      {/* Filters */}
+      <div className="flex gap-4">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or email..."
+            className="pl-10"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Users</SelectItem>
+            <SelectItem value="admin">Admins</SelectItem>
+            <SelectItem value="teacher">Teachers</SelectItem>
+            <SelectItem value="student">Students</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Users Table */}
       <Card>
-        <CardContent className="p-12 text-center">
-          <GraduationCap className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">No teachers registered yet.</p>
-          <p className="text-sm text-muted-foreground mt-2">Connect a backend to manage teachers.</p>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-muted-foreground">Loading users...</div>
+            </div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              No users found
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left p-4 font-medium">Name</th>
+                    <th className="text-left p-4 font-medium">Email</th>
+                    <th className="text-left p-4 font-medium">Role</th>
+                    <th className="text-left p-4 font-medium">Status</th>
+                    <th className="text-right p-4 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user._id} className="border-t">
+                      <td className="p-4 font-medium">{user.name}</td>
+                      <td className="p-4 text-muted-foreground">{user.email}</td>
+                      <td className="p-4">
+                        <span className="px-2 py-1 rounded text-xs bg-primary/10">
+                          {user.role}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span className={`px-2 py-1 rounded text-xs ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                          {user.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleStatus(user._id)}
+                        >
+                          {user.isActive ? 'Deactivate' : 'Activate'}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteUser(user._id)}
+                        >
+                          Delete
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }
 
-function StudentsPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Students</h1>
-        <p className="text-muted-foreground mt-1">Manage student accounts</p>
-      </div>
-      <Card>
-        <CardContent className="p-12 text-center">
-          <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">No students registered yet.</p>
-          <p className="text-sm text-muted-foreground mt-2">Connect a backend to manage students.</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+function SystemPage() {
+  const [stats, setStats] = useState(null);
+  const { toast } = useToast();
 
-function ReportsPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Reports</h1>
-        <p className="text-muted-foreground mt-1">View system-wide analytics and reports</p>
-      </div>
-      <Card>
-        <CardContent className="p-12 text-center">
-          <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Reports will be available once data is collected.</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+  useEffect(() => {
+    fetchStats();
+  }, []);
 
-function SettingsPage() {
+  const fetchStats = async () => {
+    try {
+      const [questionStats, examStats] = await Promise.all([
+        adminAPI.getQuestionStats(),
+        adminAPI.getExamStats()
+      ]);
+      setStats({
+        questions: questionStats.data,
+        exams: examStats.data
+      });
+    } catch (error) {
+      toast({
+        title: 'Error loading stats',
+        description: error.response?.data?.error || 'Could not fetch system stats',
+        variant: 'destructive'
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-        <p className="text-muted-foreground mt-1">Configure system settings</p>
+        <h1 className="text-3xl font-bold text-foreground">System Overview</h1>
+        <p className="text-muted-foreground mt-1">View system-wide statistics</p>
       </div>
-      <Card>
-        <CardContent className="p-12 text-center">
-          <Settings className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Settings will be available after backend setup.</p>
-        </CardContent>
-      </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Question Bank</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Total Questions</span>
+                  <span className="text-2xl font-bold">{stats.questions.total}</span>
+                </div>
+                {stats.questions.bySubject?.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">By Subject</h4>
+                    <div className="space-y-2">
+                      {stats.questions.bySubject.map((item) => (
+                        <div key={item._id} className="flex items-center justify-between text-sm">
+                          <span>{item._id}</span>
+                          <span className="font-medium">{item.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Exams</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Total Exams</span>
+                  <span className="text-2xl font-bold">{stats.exams.total}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Active Exams</span>
+                  <span className="text-2xl font-bold">{stats.exams.active}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
 
 export default function AdminDashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/auth');
+  };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-card border-r border-border transition-transform lg:relative lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex h-16 items-center gap-2 border-b border-border px-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <FileText className="h-5 w-5 text-primary-foreground" />
+    <div className="min-h-screen bg-background">
+      {/* Navigation */}
+      <div className="border-b">
+        <div className="container flex items-center justify-between py-4">
+          <div className="flex items-center gap-6">
+            <h2 className="text-xl font-bold">ExamGenie Admin</h2>
+            <nav className="hidden md:flex gap-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link key={item.path} to={item.path}>
+                    <Button
+                      variant={isActive ? 'default' : 'ghost'}
+                      className="gap-2"
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </Button>
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
-          <span className="text-lg font-semibold text-foreground">ExamGen</span>
-          <span className="ml-auto text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded">Admin</span>
-        </div>
-        
-        <nav className="p-4 space-y-1">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path || 
-              (item.path !== '/dashboard/admin' && location.pathname.startsWith(item.path));
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive 
-                    ? 'bg-primary/10 text-primary' 
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
-          <Button variant="ghost" className="w-full justify-start text-muted-foreground" asChild>
-            <Link to="/">
-              <LogOut className="mr-2 h-4 w-4" />
-              Log Out
-            </Link>
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
           </Button>
         </div>
-      </aside>
+      </div>
 
-      {/* Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-card/95 backdrop-blur px-4 lg:px-6">
-          <button
-            className="lg:hidden p-2 -ml-2"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <div className="flex-1" />
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-destructive/10 flex items-center justify-center">
-              <Shield className="h-4 w-4 text-destructive" />
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 p-4 lg:p-6">
-          <Routes>
-            <Route index element={<AdminOverview />} />
-            <Route path="teachers" element={<TeachersPage />} />
-            <Route path="students" element={<StudentsPage />} />
-            <Route path="reports" element={<ReportsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Routes>
-        </main>
+      {/* Content */}
+      <div className="container py-8">
+        <Routes>
+          <Route index element={<AdminOverview />} />
+          <Route path="users" element={<UsersPage />} />
+          <Route path="system" element={<SystemPage />} />
+        </Routes>
       </div>
     </div>
   );
