@@ -163,8 +163,12 @@ export function ExamGenerator() {
       return;
     }
 
-    // No marks validation - user can set any total
-    toast.loading("Generating question paper with AI...", { id: 'generate' });
+    // Clear any existing generated exam to show regeneration is happening
+    setGeneratedExam(null);
+
+    // Show loading toast with unique ID
+    const loadingToastId = `generate-${Date.now()}`;
+    toast.loading("Generating question paper with AI...", { id: loadingToastId });
 
     try {
       // Call AI for each section to generate questions
@@ -175,6 +179,7 @@ export function ExamGenerator() {
         let sectionQuestions = [];
 
         try {
+          // Add timestamp to ensure different requests each time
           const response = await fetch('http://localhost:5000/api/ai/generate-questions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -182,7 +187,8 @@ export function ExamGenerator() {
               subject: examDetails.subject,
               topic: examDetails.topics || `${examDetails.subject} general topics`,
               difficulty: section.difficulty,
-              count: parseInt(section.count)
+              count: parseInt(section.count),
+              timestamp: Date.now() // Force new generation
             })
           });
 
@@ -227,11 +233,11 @@ export function ExamGenerator() {
       };
 
       setGeneratedExam(newExam);
-      toast.success("Questions generated! Review and edit before finalizing.", { id: 'generate' });
+      toast.success("Questions generated successfully! Review and finalize when ready.", { id: loadingToastId });
 
     } catch (error) {
       console.error('Error generating exam:', error);
-      toast.error("Failed to generate questions. Please try again.", { id: 'generate' });
+      toast.error("Failed to generate questions. Please try again.", { id: loadingToastId });
     }
   };
 
@@ -247,53 +253,199 @@ export function ExamGenerator() {
           { q: 'What is the value of π (pi) approximately?', opts: ['3.14', '2.71', '1.41', '3.33'], ans: 0 },
           { q: 'What is 15% of 200?', opts: ['30', '25', '35', '40'], ans: 0 },
           { q: 'What is the square root of 144?', opts: ['12', '14', '10', '16'], ans: 0 },
-          { q: 'What is 7³ (7 cubed)?', opts: ['343', '49', '147', '294'], ans: 0 }
+          { q: 'What is 7³ (7 cubed)?', opts: ['343', '49', '147', '294'], ans: 0 },
+          { q: 'What is the sum of angles in a triangle?', opts: ['180°', '360°', '90°', '270°'], ans: 0 }
         ],
         'Medium': [
           { q: 'Solve: 3x + 5 = 20', opts: ['x = 5', 'x = 7', 'x = 3', 'x = 6'], ans: 0 },
-          { q: 'What is the area of a triangle with base 10cm and height 6cm?', opts: ['30 cm²', '60 cm²', '15 cm²', '20 cm²'], ans: 0 }
+          { q: 'What is the area of a triangle with base 10cm and height 6cm?', opts: ['30 cm²', '60 cm²', '15 cm²', '20 cm²'], ans: 0 },
+          { q: 'If sin θ = 0.5, what is θ (in degrees)?', opts: ['30°', '45°', '60°', '90°'], ans: 0 },
+          { q: 'What is the slope of the line y = 3x + 2?', opts: ['3', '2', '1', '0'], ans: 0 }
         ],
         'Hard': [
-          { q: 'Find the derivative of f(x) = x³ - 3x²', opts: ['3x² - 6x', '3x² + 6x', 'x² - 6x', '3x² - 3x'], ans: 0 }
+          { q: 'Find the derivative of f(x) = x³ - 3x²', opts: ['3x² - 6x', '3x² + 6x', 'x² - 6x', '3x² - 3x'], ans: 0 },
+          { q: 'What is the integral of 2x?', opts: ['x² + C', '2x² + C', 'x + C', '2 + C'], ans: 0 },
+          { q: 'Solve the quadratic equation: x² - 5x + 6 = 0', opts: ['x = 2, 3', 'x = 1, 6', 'x = -2, -3', 'x = 0, 5'], ans: 0 }
         ]
       },
       'Physics': {
         'Easy': [
           { q: 'What is the SI unit of force?', opts: ['Newton', 'Joule', 'Watt', 'Pascal'], ans: 0 },
-          { q: 'What is the speed of light in vacuum?', opts: ['3 × 10⁸ m/s', '3 × 10⁶ m/s', '3 × 10⁷ m/s', '3 × 10⁹ m/s'], ans: 0 }
+          { q: 'What is the speed of light in vacuum?', opts: ['3 × 10⁸ m/s', '3 × 10⁶ m/s', '3 × 10⁷ m/s', '3 × 10⁹ m/s'], ans: 0 },
+          { q: 'What is the unit of electric current?', opts: ['Ampere', 'Volt', 'Ohm', 'Watt'], ans: 0 },
+          { q: 'What is the acceleration due to gravity on Earth?', opts: ['9.8 m/s²', '10 m/s²', '8.9 m/s²', '11 m/s²'], ans: 0 },
+          { q: 'Which law states "Every action has an equal and opposite reaction"?', opts: ['Newton\'s Third Law', 'Newton\'s First Law', 'Newton\'s Second Law', 'Law of Gravitation'], ans: 0 }
         ],
         'Medium': [
-          { q: 'What is Newton\'s second law of motion?', opts: ['F = ma', 'F = m/a', 'F = a/m', 'F = m + a'], ans: 0 }
+          { q: 'What is Newton\'s second law of motion?', opts: ['F = ma', 'F = m/a', 'F = a/m', 'F = m + a'], ans: 0 },
+          { q: 'What is the formula for kinetic energy?', opts: ['½mv²', 'mgh', 'mv', 'ma'], ans: 0 },
+          { q: 'What is Ohm\'s Law?', opts: ['V = IR', 'I = VR', 'R = VI', 'V = I/R'], ans: 0 },
+          { q: 'What type of lens is used to correct myopia?', opts: ['Concave lens', 'Convex lens', 'Bifocal lens', 'Cylindrical lens'], ans: 0 }
         ],
         'Hard': [
-          { q: 'What is the escape velocity from Earth\'s surface?', opts: ['11.2 km/s', '9.8 km/s', '7.9 km/s', '15.6 km/s'], ans: 0 }
+          { q: 'What is the escape velocity from Earth\'s surface?', opts: ['11.2 km/s', '9.8 km/s', '7.9 km/s', '15.6 km/s'], ans: 0 },
+          { q: 'What is the work function in photoelectric effect?', opts: ['Minimum energy to eject electron', 'Maximum energy of photon', 'Kinetic energy of electron', 'Frequency of light'], ans: 0 },
+          { q: 'What is the unit of magnetic flux?', opts: ['Weber', 'Tesla', 'Gauss', 'Henry'], ans: 0 }
+        ]
+      },
+      'Chemistry': {
+        'Easy': [
+          { q: 'What is the chemical symbol for water?', opts: ['H₂O', 'CO₂', 'O₂', 'H₂'], ans: 0 },
+          { q: 'What is the atomic number of Carbon?', opts: ['6', '8', '12', '14'], ans: 0 },
+          { q: 'What is the pH of pure water?', opts: ['7', '0', '14', '10'], ans: 0 },
+          { q: 'Which gas is most abundant in Earth\'s atmosphere?', opts: ['Nitrogen', 'Oxygen', 'Carbon dioxide', 'Argon'], ans: 0 },
+          { q: 'What is the formula for common salt?', opts: ['NaCl', 'KCl', 'CaCl₂', 'MgCl₂'], ans: 0 }
+        ],
+        'Medium': [
+          { q: 'What is Avogadro\'s number?', opts: ['6.022 × 10²³', '6.022 × 10²²', '3.14 × 10²³', '1.6 × 10⁻¹⁹'], ans: 0 },
+          { q: 'What is the molecular formula of benzene?', opts: ['C₆H₆', 'C₆H₁₂', 'C₆H₁₄', 'CH₄'], ans: 0 },
+          { q: 'What type of bond is found in a molecule of nitrogen (N₂)?', opts: ['Triple covalent bond', 'Double covalent bond', 'Single covalent bond', 'Ionic bond'], ans: 0 },
+          { q: 'Which element has the electronic configuration 2,8,8,2?', opts: ['Calcium', 'Magnesium', 'Argon', 'Potassium'], ans: 0 }
+        ],
+        'Hard': [
+          { q: 'What is the hybridization of carbon in methane (CH₄)?', opts: ['sp³', 'sp²', 'sp', 'sp³d'], ans: 0 },
+          { q: 'Which of the following is an example of a Friedel-Crafts reaction?', opts: ['Alkylation of benzene', 'Nitration of benzene', 'Sulfonation of benzene', 'Halogenation of alkane'], ans: 0 },
+          { q: 'What is the standard enthalpy of formation of elements in their standard state?', opts: ['Zero', 'Positive', 'Negative', 'Variable'], ans: 0 }
+        ]
+      },
+      'Computer Science': {
+        'Easy': [
+          { q: 'What does CPU stand for?', opts: ['Central Processing Unit', 'Central Program Unit', 'Computer Personal Unit', 'Central Processor Utility'], ans: 0 },
+          { q: 'Which of the following is a programming language?', opts: ['Python', 'HTTP', 'HTML', 'CSS'], ans: 0 },
+          { q: 'What is the full form of RAM?', opts: ['Random Access Memory', 'Read Access Memory', 'Rapid Access Memory', 'Random Allocated Memory'], ans: 0 },
+          { q: 'What is binary number system based on?', opts: ['0 and 1', '0 to 9', 'A to Z', '0 to 7'], ans: 0 },
+          { q: 'Which device is used to input data into a computer?', opts: ['Keyboard', 'Monitor', 'Speaker', 'Printer'], ans: 0 }
+        ],
+        'Medium': [
+          { q: 'What is the time complexity of binary search?', opts: ['O(log n)', 'O(n)', 'O(n²)', 'O(1)'], ans: 0 },
+          { q: 'Which data structure uses LIFO principle?', opts: ['Stack', 'Queue', 'Array', 'Linked List'], ans: 0 },
+          { q: 'What does SQL stand for?', opts: ['Structured Query Language', 'Simple Query Language', 'Standard Query Language', 'System Query Language'], ans: 0 },
+          { q: 'Which sorting algorithm has best average case complexity?', opts: ['Quick Sort', 'Bubble Sort', 'Selection Sort', 'Insertion Sort'], ans: 0 }
+        ],
+        'Hard': [
+          { q: 'What is the space complexity of merge sort?', opts: ['O(n)', 'O(log n)', 'O(1)', 'O(n log n)'], ans: 0 },
+          { q: 'Which design pattern ensures a class has only one instance?', opts: ['Singleton', 'Factory', 'Observer', 'Decorator'], ans: 0 },
+          { q: 'What is the purpose of a semaphore in operating systems?', opts: ['Process synchronization', 'Memory allocation', 'File management', 'CPU scheduling'], ans: 0 }
+        ]
+      },
+      'Biology': {
+        'Easy': [
+          { q: 'What is the powerhouse of the cell?', opts: ['Mitochondria', 'Nucleus', 'Ribosome', 'Chloroplast'], ans: 0 },
+          { q: 'What is the basic unit of life?', opts: ['Cell', 'Tissue', 'Organ', 'Molecule'], ans: 0 },
+          { q: 'Which organ pumps blood in the human body?', opts: ['Heart', 'Lungs', 'Liver', 'Kidney'], ans: 0 },
+          { q: 'What is the process by which plants make food?', opts: ['Photosynthesis', 'Respiration', 'Digestion', 'Absorption'], ans: 0 },
+          { q: 'How many chromosomes do humans have?', opts: ['46', '23', '92', '48'], ans: 0 }
+        ],
+        'Medium': [
+          { q: 'What is the function of hemoglobin?', opts: ['Oxygen transport', 'Blood clotting', 'Immunity', 'Digestion'], ans: 0 },
+          { q: 'Which organelle is responsible for protein synthesis?', opts: ['Ribosome', 'Mitochondria', 'Golgi apparatus', 'Lysosome'], ans: 0 },
+          { q: 'What is the structural and functional unit of kidney?', opts: ['Nephron', 'Neuron', 'Alveoli', 'Villi'], ans: 0 },
+          { q: 'What type of blood vessels carry blood away from the heart?', opts: ['Arteries', 'Veins', 'Capillaries', 'Venules'], ans: 0 }
+        ],
+        'Hard': [
+          { q: 'What is the role of RNA polymerase in transcription?', opts: ['Synthesizes RNA from DNA template', 'Replicates DNA', 'Translates RNA to protein', 'Repairs DNA damage'], ans: 0 },
+          { q: 'Which process occurs during the light-independent reactions of photosynthesis?', opts: ['Calvin cycle', 'Electron transport chain', 'Water splitting', 'ATP synthesis'], ans: 0 },
+          { q: 'What is the sigmoid curve in population growth called?', opts: ['Logistic growth', 'Exponential growth', 'Linear growth', 'Zero growth'], ans: 0 }
+        ]
+      },
+      'English': {
+        'Easy': [
+          { q: 'What is the plural of "child"?', opts: ['Children', 'Childs', 'Childrens', 'Childes'], ans: 0 },
+          { q: 'Which is a noun?', opts: ['Book', 'Run', 'Beautiful', 'Quickly'], ans: 0 },
+          { q: 'What is the opposite of "happy"?', opts: ['Sad', 'Angry', 'Excited', 'Calm'], ans: 0 },
+          { q: 'Identify the verb: "She runs every morning"', opts: ['Runs', 'She', 'Every', 'Morning'], ans: 0 },
+          { q: 'What is the past tense of "go"?', opts: ['Went', 'Gone', 'Going', 'Goes'], ans: 0 }
+        ],
+        'Medium': [
+          { q: 'What is a metaphor?', opts: ['A comparison without using like or as', 'A comparison using like or as', 'An exaggeration', 'A sound imitation'], ans: 0 },
+          { q: 'Which is the correct sentence?', opts: ['She has been working here since 2020.', 'She has been working here from 2020.', 'She is working here since 2020.', 'She works here from 2020.'], ans: 0 },
+          { q: 'What is the subject in: "The cat chased the mouse"?', opts: ['The cat', 'Chased', 'The mouse', 'Cat chased'], ans: 0 },
+          { q: 'Identify the adverb: "He speaks very softly"', opts: ['Softly', 'Speaks', 'Very', 'He'], ans: 0 }
+        ],
+        'Hard': [
+          { q: 'What literary device is used in "The wind whispered through the trees"?', opts: ['Personification', 'Simile', 'Metaphor', 'Alliteration'], ans: 0 },
+          { q: 'Which sentence uses the subjunctive mood correctly?', opts: ['If I were you, I would go.', 'If I was you, I would go.', 'If I am you, I would go.', 'If I will be you, I would go.'], ans: 0 },
+          { q: 'What is a zeugma?', opts: ['Using one word to modify two different words', 'Repetition of vowel sounds', 'Reversal of word order', 'Exaggeration for effect'], ans: 0 }
         ]
       },
       'History': {
         'Easy': [
           { q: 'When did India gain independence?', opts: ['1947', '1950', '1942', '1945'], ans: 0 },
           { q: 'Who was the first Prime Minister of India?', opts: ['Jawaharlal Nehru', 'Mahatma Gandhi', 'Sardar Patel', 'Subhas Chandra Bose'], ans: 0 },
-          { q: 'In which year did World War II end?', opts: ['1945', '1944', '1946', '1943'], ans: 0 }
+          { q: 'In which year did World War II end?', opts: ['1945', '1944', '1946', '1943'], ans: 0 },
+          { q: 'Who discovered America?', opts: ['Christopher Columbus', 'Vasco da Gama', 'Marco Polo', 'Ferdinand Magellan'], ans: 0 },
+          { q: 'The Great Wall of China was built to protect against which invaders?', opts: ['Mongols', 'Persians', 'Romans', 'Greeks'], ans: 0 }
         ],
         'Medium': [
           { q: 'Who led the Salt March (Dandi March)?', opts: ['Mahatma Gandhi', 'Jawaharlal Nehru', 'Bal Gangadhar Tilak', 'Lala Lajpat Rai'], ans: 0 },
-          { q: 'What year did the Quit India Movement begin?', opts: ['1942', '1940', '1945', '1930'], ans: 0 }
+          { q: 'What year did the Quit India Movement begin?', opts: ['1942', '1940', '1945', '1930'], ans: 0 },
+          { q: 'The French Revolution began in which year?', opts: ['1789', '1799', '1776', '1804'], ans: 0 },
+          { q: 'Who was known as the Iron Man of India?', opts: ['Sardar Vallabhbhai Patel', 'Subhas Chandra Bose', 'Bhagat Singh', 'Lal Bahadur Shastri'], ans: 0 }
         ],
         'Hard': [
-          { q: 'Who was the Viceroy of India during the Partition?', opts: ['Lord Mountbatten', 'Lord Wavell', 'Lord Linlithgow', 'Lord Irwin'], ans: 0 }
+          { q: 'Who was the Viceroy of India during the Partition?', opts: ['Lord Mountbatten', 'Lord Wavell', 'Lord Linlithgow', 'Lord Irwin'], ans: 0 },
+          { q: 'The Treaty of Versailles was signed in which year?', opts: ['1919', '1918', '1920', '1921'], ans: 0 },
+          { q: 'Which Mughal emperor built the Taj Mahal?', opts: ['Shah Jahan', 'Akbar', 'Aurangzeb', 'Jahangir'], ans: 0 }
         ]
       },
       'Geography': {
         'Easy': [
           { q: 'What is the largest continent?', opts: ['Asia', 'Africa', 'North America', 'Europe'], ans: 0 },
           { q: 'Which is the longest river in the world?', opts: ['Nile', 'Amazon', 'Yangtze', 'Mississippi'], ans: 0 },
-          { q: 'What is the capital of India?', opts: ['New Delhi', 'Mumbai', 'Kolkata', 'Chennai'], ans: 0 }
+          { q: 'What is the capital of India?', opts: ['New Delhi', 'Mumbai', 'Kolkata', 'Chennai'], ans: 0 },
+          { q: 'Which ocean is the largest?', opts: ['Pacific Ocean', 'Atlantic Ocean', 'Indian Ocean', 'Arctic Ocean'], ans: 0 },
+          { q: 'Mount Everest is located in which mountain range?', opts: ['Himalayas', 'Andes', 'Alps', 'Rockies'], ans: 0 }
         ],
         'Medium': [
-          { q: 'Which mountain range separates Europe from Asia?', opts: ['Ural Mountains', 'Himalayas', 'Alps', 'Andes'], ans: 0 }
+          { q: 'Which mountain range separates Europe from Asia?', opts: ['Ural Mountains', 'Himalayas', 'Alps', 'Andes'], ans: 0 },
+          { q: 'What is the capital of Australia?', opts: ['Canberra', 'Sydney', 'Melbourne', 'Brisbane'], ans: 0 },
+          { q: 'Which desert is the largest in the world?', opts: ['Sahara Desert', 'Arabian Desert', 'Gobi Desert', 'Kalahari Desert'], ans: 0 },
+          { q: 'The Tropic of Cancer passes through how many Indian states?', opts: ['8', '5', '10', '12'], ans: 0 }
         ],
         'Hard': [
-          { q: 'What is the approximate percentage of Earth\'s surface covered by oceans?', opts: ['71%', '60%', '80%', '50%'], ans: 0 }
+          { q: 'What is the approximate percentage of Earth\'s surface covered by oceans?', opts: ['71%', '60%', '80%', '50%'], ans: 0 },
+          { q: 'Which strait separates India and Sri Lanka?', opts: ['Palk Strait', 'Strait of Hormuz', 'Strait of Gibraltar', 'Bering Strait'], ans: 0 },
+          { q: 'What is the deepest point in the ocean called?', opts: ['Mariana Trench', 'Tonga Trench', 'Puerto Rico Trench', 'Java Trench'], ans: 0 }
+        ]
+      },
+      'Economics': {
+        'Easy': [
+          { q: 'What does GDP stand for?', opts: ['Gross Domestic Product', 'General Domestic Product', 'Gross Development Product', 'Global Domestic Product'], ans: 0 },
+          { q: 'What is the basic economic problem?', opts: ['Scarcity', 'Unemployment', 'Inflation', 'Poverty'], ans: 0 },
+          { q: 'Which organization regulates monetary policy in India?', opts: ['RBI', 'SEBI', 'NITI Aayog', 'Finance Ministry'], ans: 0 },
+          { q: 'What is the currency of Japan?', opts: ['Yen', 'Yuan', 'Won', 'Ringgit'], ans: 0 },
+          { q: 'In economics, what does "supply and demand" determine?', opts: ['Price', 'Quality', 'Quantity only', 'Brand value'], ans: 0 }
+        ],
+        'Medium': [
+          { q: 'What is inflation?', opts: ['General increase in prices', 'Decrease in prices', 'Stable prices', 'Government spending'], ans: 0 },
+          { q: 'What type of market has only one seller?', opts: ['Monopoly', 'Oligopoly', 'Perfect competition', 'Duopoly'], ans: 0 },
+          { q: 'What is the law of demand?', opts: ['Price increases, demand decreases', 'Price decreases, demand decreases', 'Price and demand are unrelated', 'Price increases, demand increases'], ans: 0 },
+          { q: 'What is fiscal policy?', opts: ['Government spending and taxation', 'Monetary supply control', 'Exchange rate management', 'Trade policy'], ans: 0 }
+        ],
+        'Hard': [
+          { q: 'What is the Philips Curve relationship?', opts: ['Inflation and unemployment', 'GDP and inflation', 'Supply and demand', 'Interest rate and growth'], ans: 0 },
+          { q: 'What is marginal utility?', opts: ['Additional satisfaction from one more unit', 'Total satisfaction', 'Average satisfaction', 'Maximum satisfaction'], ans: 0 },
+          { q: 'In perfect competition, firms are:', opts: ['Price takers', 'Price makers', 'Price discriminators', 'Monopolists'], ans: 0 }
+        ]
+      },
+      'Commerce': {
+        'Easy': [
+          { q: 'What does the term "debit" mean in accounting?', opts: ['Left side of account', 'Right side of account', 'Loss', 'Profit'], ans: 0 },
+          { q: 'What is a balance sheet?', opts: ['Statement of assets and liabilities', 'Statement of income', 'Cash flow statement', 'Budget statement'], ans: 0 },
+          { q: 'GST stands for:', opts: ['Goods and Services Tax', 'General Sales Tax', 'Government Service Tax', 'Goods Supply Tax'], ans: 0 },
+          { q: 'What is equity in business?', opts: ['Owner\'s capital', 'Borrowed capital', 'Revenue', 'Expenses'], ans: 0 },
+          { q: 'Which document is used to record daily transactions?', opts: ['Journal', 'Ledger', 'Trial Balance', 'Balance Sheet'], ans: 0 }
+        ],
+        'Medium': [
+          { q: 'What is the accounting equation?', opts: ['Assets = Liabilities + Equity', 'Assets = Revenue - Expenses', 'Assets = Liabilities - Equity', 'Profit = Revenue - Expenses'], ans: 0 },
+          { q: 'What is depreciation?', opts: ['Decrease in asset value over time', 'Increase in asset value', 'Interest on loan', 'Profit from sale'], ans: 0 },
+          { q: 'What is working capital?', opts: ['Current Assets - Current Liabilities', 'Total Assets - Total Liabilities', 'Revenue - Expenses', 'Cash + Bank'], ans: 0 },
+          { q: 'What is a trial balance used for?', opts: ['Check arithmetic accuracy', 'Calculate profit', 'Show financial position', 'Record transactions'], ans: 0 }
+        ],
+        'Hard': [
+          { q: 'What is the double-entry system principle?', opts: ['Every debit has a corresponding credit', 'Assets equal liabilities', 'Revenue equals expenses', 'Cash basis accounting'], ans: 0 },
+          { q: 'What is a contingent liability?', opts: ['Potential future obligation', 'Current obligation', 'Past obligation settled', 'Revenue receivable'], ans: 0 },
+          { q: 'Which method is used for inventory valuation?', opts: ['FIFO, LIFO, Weighted Average', 'Only FIFO', 'Only LIFO', 'Cash basis only'], ans: 0 }
         ]
       }
     };
@@ -302,10 +454,13 @@ export function ExamGenerator() {
     const subjectBank = questionBank[subject] || {};
     const diffBank = subjectBank[difficulty] || [];
 
+    // Shuffle the question bank for variety
+    const shuffledBank = [...diffBank].sort(() => Math.random() - 0.5);
+
     for (let i = 0; i < count; i++) {
-      if (diffBank.length > 0) {
+      if (shuffledBank.length > 0) {
         // Use real question from bank (cycle through if needed)
-        const template = diffBank[i % diffBank.length];
+        const template = shuffledBank[i % shuffledBank.length];
         questions.push({
           id: crypto.randomUUID(),
           text: template.q,
@@ -349,6 +504,7 @@ export function ExamGenerator() {
         exam={generatedExam}
         onBack={() => setGeneratedExam(null)}
         onRegenerate={generateExam}
+        showFinalize={true}
       />
     );
   }

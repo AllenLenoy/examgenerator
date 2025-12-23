@@ -1,29 +1,12 @@
 import express from "express";
-import { v4 as uuid } from "uuid";
-import { questions } from "../data/memDb.js";
 
 const router = express.Router();
 
-// Add a question to the bank
+// This route is deprecated - questions are managed through teacher routes
 router.post("/", (req, res) => {
-    const { text, options, correctOption, difficulty, topic } = req.body;
-
-    if (!text || !options || correctOption === undefined) {
-        return res.status(400).json({ message: "Invalid question data" });
-    }
-
-    const question = {
-        id: uuid(),
-        text,
-        options,
-        correctOption,
-        difficulty,
-        topic
-    };
-
-    questions.push(question);
-
-    res.status(201).json(question);
+    res.status(501).json({
+        message: "This endpoint is deprecated. Use teacher question management endpoints instead."
+    });
 });
 
 export default router;

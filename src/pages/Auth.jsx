@@ -22,6 +22,17 @@ export default function Auth() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+
+    // Input validation
+    if (!loginEmail || !loginPassword) {
+      toast({
+        title: 'Missing fields',
+        description: 'Please enter both email and password',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -54,9 +65,17 @@ export default function Auth() {
       }
 
     } catch (error) {
+      console.error('Login error:', error);
+
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        'Invalid email or password';
+
       toast({
         title: 'Login failed',
-        description: error.response?.data?.error || 'Invalid email or password',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {
@@ -66,6 +85,44 @@ export default function Auth() {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+
+    // Input validation
+    if (!signupName?.trim()) {
+      toast({
+        title: 'Name required',
+        description: 'Please enter your full name',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!signupEmail) {
+      toast({
+        title: 'Email required',
+        description: 'Please enter your email address',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!signupPassword) {
+      toast({
+        title: 'Password required',
+        description: 'Please enter a password',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (signupPassword.length < 6) {
+      toast({
+        title: 'Weak password',
+        description: 'Password must be at least 6 characters long',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -91,9 +148,17 @@ export default function Auth() {
       setSignupPassword('');
 
     } catch (error) {
+      console.error('Signup error:', error);
+
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        'Could not create account';
+
       toast({
         title: 'Registration failed',
-        description: error.response?.data?.error || 'Could not create account',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {

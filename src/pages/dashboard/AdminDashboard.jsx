@@ -162,10 +162,14 @@ function AdminOverview() {
 
 function UsersPage() {
   const [users, setUsers] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedTeacher, setSelectedTeacher] = useState('');
   const { toast } = useToast();
 
   // New user form
@@ -178,6 +182,7 @@ function UsersPage() {
 
   useEffect(() => {
     fetchUsers();
+    fetchTeachers();
   }, [filter, search]);
 
   const fetchUsers = async () => {
@@ -187,7 +192,9 @@ function UsersPage() {
       if (search) params.search = search;
 
       const response = await adminAPI.getUsers(params);
-      setUsers(response.data.users);
+      // Filter out deleted users (isActive: false)
+      const activeUsers = response.data.users.filter(user => user.isActive !== false);
+      setUsers(activeUsers);
     } catch (error) {
       toast({
         title: 'Error loading users',
@@ -196,6 +203,15 @@ function UsersPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTeachers = async () => {
+    try {
+      const response = await adminAPI.getUsers({ role: 'teacher' });
+      setTeachers(response.data.users.filter(t => t.isActive));
+    } catch (error) {
+      console.error('Error fetching teachers:', error);
     }
   };
 
@@ -237,15 +253,16 @@ function UsersPage() {
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!confirm('Are you sure you want to deactivate this user?')) return;
+    if (!confirm('Are you sure you want to delete this user? They will be permanently removed from the list.')) return;
 
     try {
       await adminAPI.deleteUser(userId);
       toast({
-        title: 'User deactivated',
-        description: 'User has been deactivated'
+        title: 'User deleted',
+        description: 'User has been deleted and removed from the system'
       });
-      fetchUsers();
+      // Immediately filter out the deleted user
+      setUsers(users.filter(u => u._id !== userId));
     } catch (error) {
       toast({
         title: 'Error',
@@ -253,6 +270,45 @@ function UsersPage() {
         variant: 'destructive'
       });
     }
+  };
+
+  const handleAssignStudent = async () => {
+    if (!selectedStudent || !selectedTeacher) {
+      toast({
+        title: 'Missing selection',
+        description: 'Please select both a student and a teacher',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      await adminAPI.assignStudents({
+        teacherId: selectedTeacher,
+        studentIds: [selectedStudent._id]
+      });
+
+      toast({
+        title: 'Student assigned!',
+        description: `${selectedStudent.name} assigned to teacher successfully`
+      });
+
+      setAssignDialogOpen(false);
+      setSelectedStudent(null);
+      setSelectedTeacher('');
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: 'Assignment failed',
+        description: error.response?.data?.error || 'Could not assign student',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const openAssignDialog = (student) => {
+    setSelectedStudent(student);
+    setAssignDialogOpen(true);
   };
 
   return (
@@ -328,6 +384,45 @@ function UsersPage() {
         </Dialog>
       </div>
 
+      {/* Student Assignment Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Student to Teacher</DialogTitle>
+            <DialogDescription>
+              Assign {selectedStudent?.name} to a teacher
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Student</Label>
+              <Input value={selectedStudent?.name || ''} disabled />
+            </div>
+            <div>
+              <Label>Select Teacher</Label>
+              <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a teacher..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {teachers.map(teacher => (
+                    <SelectItem key={teacher._id} value={teacher._id}>
+                      {teacher.name} ({teacher.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setAssignDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAssignStudent}>Assign</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Filters */}
       <div className="flex gap-4">
         <div className="flex-1 relative">
@@ -399,6 +494,16 @@ function UsersPage() {
                         >
                           {user.isActive ? 'Deactivate' : 'Activate'}
                         </Button>
+                        {user.role === 'student' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openAssignDialog(user)}
+                          >
+                            <UserPlus className="h-4 w-4 mr-1" />
+                            Assign
+                          </Button>
+                        )}
                         <Button
                           variant="destructive"
                           size="sm"

@@ -1,15 +1,19 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, RefreshCw, Printer, Download, Edit2, Save, X } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Printer, Download, Edit2, Save, X, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
-export function ExamPreview({ exam, onBack, onRegenerate, editable = false, onUpdate }) {
+export function ExamPreview({ exam, onBack, onRegenerate, editable = false, onUpdate, showFinalize = false }) {
+  const navigate = useNavigate();
   const [editingQuestionId, setEditingQuestionId] = useState(null);
   const [editedQuestion, setEditedQuestion] = useState(null);
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
   const handlePrint = () => {
     window.print();
@@ -45,6 +49,131 @@ export function ExamPreview({ exam, onBack, onRegenerate, editable = false, onUp
     } catch (error) {
       console.error('Error downloading PDF:', error);
       alert('Failed to download PDF. Please try again.');
+    }
+  };
+
+  const handleFinalize = async () => {
+    setIsFinalizing(true);
+    toast.loading('Saving exam...', { id: 'finalize' });
+
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Starting finalization for exam:', exam.title);
+
+      // Step 1: Save all AI-generated questions to the database first
+      const savedQuestionIds = [];
+
+      console.log(`Saving ${exam.questions.length} questions...`);
+      for (const question of exam.questions) {
+        try {
+          // Capitalize difficulty to match model enum
+          const capitalizedDifficulty = question.difficulty
+            ? question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1).toLowerCase()
+            : 'Easy';
+
+          const questionData = {
+            text: question.text,
+            type: question.type || 'mcq',
+            difficulty: capitalizedDifficulty,
+            marks: question.marks || 1,
+            subject: exam.subject || exam.metadata?.subject,
+            topic: question.topic || exam.metadata?.topics || 'General',
+            options: question.options || [],
+            correctOption: question.correctOption !== undefined ? question.correctOption : 0,
+            correctAnswer: question.correctAnswer,
+            isActive: true
+          };
+
+          const response = await fetch('http://localhost:5000/api/teacher/questions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(questionData)
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            savedQuestionIds.push(data.question._id);
+            console.log(`✓ Question saved: ${question.text.substring(0, 50)}...`);
+          } else {
+            const errorData = await response.json();
+            console.error('Failed to save question:', errorData);
+            console.error('Question data that failed:', questionData);
+          }
+        } catch (error) {
+          console.error('Error saving question:', error);
+        }
+      }
+
+      console.log(`Saved ${savedQuestionIds.length} questions successfully`);
+
+      if (savedQuestionIds.length === 0) {
+        throw new Error('No questions were saved successfully');
+      }
+
+      // Step 2: Create exam with the saved question IDs
+      // Build rules from the distribution metadata
+      const rules = [];
+      if (exam.metadata?.distribution) {
+        for (const section of exam.metadata.distribution) {
+          rules.push({
+            topic: exam.metadata.topics || exam.subject || 'General',
+            difficulty: section.difficulty || 'Medium',
+            count: parseInt(section.count) || 1
+          });
+        }
+      } else {
+        // Fallback: single rule
+        rules.push({
+          topic: exam.metadata?.topics || exam.subject || 'General',
+          difficulty: 'Medium',
+          count: exam.questions.length
+        });
+      }
+
+      const examData = {
+        title: exam.title,
+        subject: exam.subject || exam.metadata?.subject,
+        duration: exam.duration,
+        totalMarks: exam.totalMarks,
+        rules: rules,
+        description: `Generated exam: ${exam.metadata?.board || ''} ${exam.metadata?.standard || ''}`.trim()
+      };
+
+      console.log('Creating exam with data:', examData);
+
+      const examResponse = await fetch('http://localhost:5000/api/teacher/exams', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(examData)
+      });
+
+      if (!examResponse.ok) {
+        const error = await examResponse.json();
+        console.error('Exam creation failed:', error);
+        throw new Error(error.error || 'Failed to save exam');
+      }
+
+      const examResult = await examResponse.json();
+      console.log('✓ Exam created successfully:', examResult);
+
+      toast.success('Exam finalized successfully!', { id: 'finalize' });
+
+      // Navigate to My Exams page after short delay
+      setTimeout(() => {
+        navigate('/dashboard/exams');
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error finalizing exam:', error);
+      toast.error(error.message || 'Failed to finalize exam', { id: 'finalize' });
+    } finally {
+      setIsFinalizing(false);
     }
   };
 
@@ -114,7 +243,7 @@ export function ExamPreview({ exam, onBack, onRegenerate, editable = false, onUp
 
   return (
     <div className="space-y-6">
-      {(onBack || onRegenerate) && (
+      {(onBack || onRegenerate || showFinalize) && (
         <div className="flex flex-wrap items-center justify-between gap-4">
           {onBack && (
             <Button variant="outline" onClick={onBack}>
@@ -133,10 +262,20 @@ export function ExamPreview({ exam, onBack, onRegenerate, editable = false, onUp
               <Download className="mr-2 h-4 w-4" />
               Download
             </Button>
-            <Button onClick={handlePrint}>
+            <Button variant="outline" onClick={handlePrint}>
               <Printer className="mr-2 h-4 w-4" />
               Print
             </Button>
+            {showFinalize && (
+              <Button
+                onClick={handleFinalize}
+                disabled={isFinalizing}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                {isFinalizing ? 'Saving...' : 'Finalize Exam'}
+              </Button>
+            )}
           </div>
         </div>
       )}

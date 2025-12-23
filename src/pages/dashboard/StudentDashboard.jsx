@@ -31,8 +31,7 @@ const STUDENT_ID = "student_1";
 export default function StudentDashboard() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const [templates, setTemplates] = useState([]);
-    const [attempts, setAttempts] = useState([]);
+    const [assignments, setAssignments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -59,20 +58,21 @@ export default function StudentDashboard() {
         const fetchData = async () => {
             try {
                 setLoading(true);
+                const token = localStorage.getItem('token');
 
-                // Fetch available exam templates
-                const templatesRes = await fetch(`${API_BASE}/templates`);
-                if (!templatesRes.ok) throw new Error('Failed to fetch templates');
-                const templatesData = await templatesRes.json();
+                // Fetch student's assigned exams
+                const assignmentsRes = await fetch('http://localhost:5000/api/student/assignments', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
 
-                // Fetch student's exam attempts
-                const attemptsRes = await fetch(`${API_BASE}/attempts?studentId=${STUDENT_ID}`);
-                if (!attemptsRes.ok) throw new Error('Failed to fetch attempts');
-                const attemptsData = await attemptsRes.json();
+                if (!assignmentsRes.ok) throw new Error('Failed to fetch assignments');
+                const assignmentsData = await assignmentsRes.json();
 
-                setTemplates(templatesData);
-                setAttempts(attemptsData);
+                setAssignments(assignmentsData.assignments || []);
             } catch (err) {
+                console.error('Error fetching data:', err);
                 setError(err.message);
             } finally {
                 setLoading(false);
@@ -88,13 +88,8 @@ export default function StudentDashboard() {
         fetchData();
     }, []);
 
-    const handleStartExam = () => {
-        navigate('/exam');
-    };
-
-    const getTemplateTitleById = (templateId) => {
-        const template = templates.find(t => t.id === templateId);
-        return template ? template.title : 'Unknown Exam';
+    const handleStartExam = (assignmentId) => {
+        navigate(`/student/exam/${assignmentId}`);
     };
 
     const handleProfileChange = (field, value) => {
@@ -119,6 +114,9 @@ export default function StudentDashboard() {
     };
 
     const renderDashboard = () => {
+        // Filter pending assignments only
+        const pendingAssignments = assignments.filter(a => a.status === 'pending');
+
         return (
             <div className="space-y-8">
                 {/* Header */}
@@ -131,30 +129,37 @@ export default function StudentDashboard() {
                     </p>
                 </div>
 
-                {/* Active Exams Only */}
+                {/* Assigned Exams */}
                 <section>
-                    <h2 className="text-2xl font-semibold mb-4 text-foreground">Active Exams</h2>
-                    {templates.length > 0 ? (
+                    <h2 className="text-2xl font-semibold mb-4 text-foreground">Assigned Exams</h2>
+                    {pendingAssignments.length > 0 ? (
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {templates.map(template => (
-                                <Card key={template.id} className="hover:shadow-lg transition-shadow">
+                            {pendingAssignments.map(assignment => (
+                                <Card key={assignment._id} className="hover:shadow-lg transition-shadow">
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
                                             <FileText className="h-5 w-5" />
-                                            {template.title}
+                                            {assignment.examTemplate?.title}
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-3">
                                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                             <Clock className="h-4 w-4" />
-                                            <span>{template.duration} minutes</span>
+                                            <span>{assignment.examTemplate?.duration} minutes</span>
                                         </div>
                                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                             <CheckCircle2 className="h-4 w-4" />
-                                            <span>{template.totalMarks} marks</span>
+                                            <span>{assignment.examTemplate?.totalMarks} marks</span>
                                         </div>
+                                        {assignment.examTemplate?.subject && (
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <span className="px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-semibold">
+                                                    {assignment.examTemplate.subject}
+                                                </span>
+                                            </div>
+                                        )}
                                         <Button
-                                            onClick={handleStartExam}
+                                            onClick={() => handleStartExam(assignment._id)}
                                             className="w-full mt-4"
                                             size="sm"
                                         >
@@ -168,7 +173,7 @@ export default function StudentDashboard() {
                     ) : (
                         <Card>
                             <CardContent className="py-8 text-center text-muted-foreground">
-                                No active exams available at the moment.
+                                No assigned exams available at the moment.
                             </CardContent>
                         </Card>
                     )}
@@ -178,12 +183,14 @@ export default function StudentDashboard() {
     };
 
     const renderResults = () => {
-        // Sort attempts by submission time (most recent first)
-        const sortedAttempts = [...attempts].sort((a, b) => {
-            if (!a.submissionTime) return 1;
-            if (!b.submissionTime) return -1;
-            return new Date(b.submissionTime) - new Date(a.submissionTime);
-        });
+        // Filter and sort completed assignments by completion time (most recent first)
+        const completedAssignments = assignments
+            .filter(a => a.status === 'completed')
+            .sort((a, b) => {
+                if (!a.completedAt) return 1;
+                if (!b.completedAt) return -1;
+                return new Date(b.completedAt) - new Date(a.completedAt);
+            });
 
         return (
             <div className="space-y-8">
@@ -192,45 +199,42 @@ export default function StudentDashboard() {
                     <p className="text-muted-foreground mt-1">View your exam history and performance</p>
                 </div>
 
-                {sortedAttempts.length > 0 ? (
+                {completedAssignments.length > 0 ? (
                     <div className="space-y-4">
-                        {sortedAttempts.map((attempt, index) => (
+                        {completedAssignments.map((assignment, index) => (
                             <Card
-                                key={attempt.id}
+                                key={assignment._id}
                                 className="hover:shadow-lg transition-shadow cursor-pointer"
-                                onClick={() => handleViewScorecard(attempt)}
+                                onClick={() => handleViewScorecard(assignment)}
                             >
                                 <CardContent className="p-6">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
                                             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                                                <span className="text-lg font-bold text-primary">#{sortedAttempts.length - index}</span>
+                                                <span className="text-lg font-bold text-primary">#{completedAssignments.length - index}</span>
                                             </div>
                                             <div>
                                                 <h3 className="font-semibold text-lg text-foreground">
-                                                    {getTemplateTitleById(attempt.examTemplateId)}
+                                                    {assignment.examTemplate?.title || 'Unknown Exam'}
                                                 </h3>
                                                 <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                                                    {attempt.submissionTime && (
+                                                    {assignment.completedAt && (
                                                         <span className="flex items-center gap-1">
                                                             <Calendar className="h-4 w-4" />
-                                                            {new Date(attempt.submissionTime).toLocaleDateString()}
+                                                            {new Date(assignment.completedAt).toLocaleDateString()}
                                                         </span>
                                                     )}
-                                                    <span className={`px-2 py-1 rounded text-xs font-semibold ${attempt.status === 'Completed'
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : 'bg-yellow-100 text-yellow-800'
-                                                        }`}>
-                                                        {attempt.status}
+                                                    <span className="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">
+                                                        Completed
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="text-right">
                                             <div className="text-2xl font-bold text-primary">
-                                                {attempt.score !== undefined ? attempt.score : 'N/A'}
+                                                {assignment.score !== undefined ? assignment.score : 'N/A'}
                                             </div>
-                                            <p className="text-sm text-muted-foreground">Score</p>
+                                            <p className="text-sm text-muted-foreground">out of {assignment.totalMarks}</p>
                                         </div>
                                     </div>
                                 </CardContent>

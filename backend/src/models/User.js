@@ -40,6 +40,22 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    qualification: {
+        type: String,
+        default: ''
+    },
+    subjects: {
+        type: String,
+        default: ''
+    },
+    bio: {
+        type: String,
+        default: ''
+    },
+    experience: {
+        type: String,
+        default: ''
+    },
     avatar: {
         type: String,
         default: ''

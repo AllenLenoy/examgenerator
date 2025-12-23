@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -8,40 +8,128 @@ import {
   LogOut,
   Menu,
   Home,
-  BookOpen
+  BookOpen,
+  User,
+  Trash2,
+  Settings
 } from 'lucide-react';
 import { ExamGenerator } from '@/components/exam/ExamGenerator';
 import { ExamPreview } from '@/components/exam/ExamPreview';
+import { ExamViewPage } from '@/components/exam/ExamViewPage';
+import { ProfileDialog } from '@/components/profile/ProfileDialog';
+import { MyStudentsPage } from '@/components/students/MyStudentsPage';
 import { useQuestionBank } from '@/context/QuestionBankContext';
 
 const navItems = [
   { label: 'Overview', icon: Home, path: '/dashboard' },
   { label: 'Create Exam', icon: ClipboardList, path: '/dashboard/create-exam' },
   { label: 'My Exams', icon: FileText, path: '/dashboard/exams' },
+  { label: 'My Students', icon: BookOpen, path: '/dashboard/students' },
 ];
 
 function DashboardOverview() {
-  const { questions, exams, getCategories } = useQuestionBank();
+  const [stats, setStats] = useState({
+    totalQuestions: 0,
+    totalExams: 0
+  });
+  const [recentExams, setRecentExams] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  const stats = [
-    { label: 'Total Questions', value: questions.length, icon: BookOpen },
-    { label: 'Exams Created', value: exams.length, icon: FileText },
-    { label: 'Categories', value: getCategories().length, icon: ClipboardList },
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Authorization': `Bearer ${token}`
+      };
+
+      // Fetch current user
+      const userResponse = await fetch('http://localhost:5000/api/auth/me', { headers });
+      const userData = await userResponse.json();
+      setCurrentUser(userData.user);
+
+      // Fetch questions
+      const questionsResponse = await fetch('http://localhost:5000/api/teacher/questions', { headers });
+      const questionsData = await questionsResponse.json();
+
+      // Fetch exams
+      const examsResponse = await fetch('http://localhost:5000/api/teacher/exams', { headers });
+      const examsData = await examsResponse.json();
+
+      // Fetch students
+      const studentsResponse = await fetch('http://localhost:5000/api/teacher/students', { headers });
+      const studentsData = await studentsResponse.json();
+
+      setStats({
+        totalQuestions: questionsData.questions?.length || 0,
+        totalExams: examsData.exams?.length || 0
+      });
+
+      // Get 5 most recent exams
+      const sortedExams = (examsData.exams || [])
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5);
+      setRecentExams(sortedExams);
+
+      setStudents(studentsData.students || []);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statCards = [
+    {
+      label: 'Total Questions',
+      value: stats.totalQuestions,
+      icon: BookOpen,
+      color: 'bg-blue-500'
+    },
+    {
+      label: 'Exams Created',
+      value: stats.totalExams,
+      icon: FileText,
+      color: 'bg-green-500'
+    }
   ];
+
+  // Get first name from user
+  const getFirstName = () => {
+    if (!currentUser?.name) return '';
+    return currentUser.name.split(' ')[0];
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Loading dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Welcome back!</h1>
+        <h1 className="text-3xl font-bold text-foreground">
+          Welcome back{getFirstName() ? `, ${getFirstName()}` : ''}!
+        </h1>
         <p className="text-muted-foreground mt-1">Here's an overview of your exam management</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {stats.map((stat) => (
+      {/* Stats Cards */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {statCards.map((stat) => (
           <Card key={stat.label}>
             <CardContent className="flex items-center gap-4 p-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                <stat.icon className="h-6 w-6 text-primary" />
+              <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${stat.color} bg-opacity-10`}>
+                <stat.icon className={`h-6 w-6 ${stat.color.replace('bg-', 'text-')}`} />
               </div>
               <div>
                 <p className="text-2xl font-bold text-card-foreground">{stat.value}</p>
@@ -52,41 +140,95 @@ function DashboardOverview() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button asChild className="w-full justify-start" variant="outline">
-              <Link to="/dashboard/create-exam">
-                <ClipboardList className="mr-2 h-4 w-4" />
-                Create New Exam
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button asChild className="w-full justify-start" variant="outline">
+            <Link to="/dashboard/create-exam">
+              <ClipboardList className="mr-2 h-4 w-4" />
+              Create New Exam
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Exams</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {exams.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No exams created yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {exams.slice(0, 5).map((exam) => (
-                  <li key={exam.id} className="flex justify-between items-center p-2 rounded-lg bg-muted/50">
-                    <span className="font-medium text-sm">{exam.title}</span>
+      {/* Recent Exams */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Recent Exams</CardTitle>
+          {recentExams.length > 0 && (
+            <Button size="sm" asChild>
+              <Link to="/dashboard/exams">View All</Link>
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {recentExams.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No exams created yet.</p>
+          ) : (
+            <div className="space-y-0 divide-y">
+              {recentExams.map((exam) => (
+                <div key={exam._id} className="flex justify-between items-center py-3 hover:bg-accent/50 transition-colors px-2 -mx-2 rounded">
+                  <div className="flex-1">
+                    <span className="font-medium text-sm block">{exam.title}</span>
+                    <span className="text-xs text-muted-foreground">{exam.subject}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
                     <span className="text-xs text-muted-foreground">{exam.totalMarks} marks</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/dashboard/exams/${exam._id}`}>View</Link>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* My Students */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>My Students</CardTitle>
+          {students.length > 0 && (
+            <Button size="sm" asChild>
+              <Link to="/dashboard/students">View All</Link>
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {students.length === 0 ? (
+            <div className="text-center py-8">
+              <User className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
+              <p className="text-muted-foreground text-sm">No students assigned yet.</p>
+              <p className="text-xs text-muted-foreground mt-1">Students will appear here once assigned by admin.</p>
+            </div>
+          ) : (
+            <div className="space-y-0 divide-y">
+              {students.slice(0, 5).map((student) => (
+                <div key={student._id} className="flex items-center gap-3 py-3 hover:bg-accent/50 transition-colors px-2 -mx-2 rounded">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-sm font-medium text-primary">
+                      {student.name?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <span className="font-medium text-sm block">{student.name}</span>
+                    <span className="text-xs text-muted-foreground">{student.email}</span>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    <ClipboardList className="h-3 w-3 mr-1" />
+                    Assign Test
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -94,46 +236,143 @@ function DashboardOverview() {
 function CreateExamPage() {
   return (
     <div className="space-y-6">
-      {/* Header is inside ExamGenerator now, but keeping container is fine */}
       <ExamGenerator />
     </div>
   );
 }
 
 function MyExamsPage() {
-  const { exams } = useQuestionBank();
+  const [exams, setExams] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchExams();
+  }, []);
+
+  const fetchExams = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/teacher/exams', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch exams');
+      }
+
+      const data = await response.json();
+      setExams(data.exams || []);
+    } catch (error) {
+      console.error('Error fetching exams:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (examId) => {
+    if (!confirm('Are you sure you want to delete this exam?')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/teacher/exams/${examId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete exam');
+      }
+
+      fetchExams(); // Refresh list
+    } catch (error) {
+      console.error('Error deleting exam:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Loading exams...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">My Exams</h1>
-        <p className="text-muted-foreground mt-1">View and manage your created exams</p>
+        <p className="text-muted-foreground mt-1">View and manage your finalized exams</p>
       </div>
+
       {exams.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
             <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No exams created yet.</p>
+            <p className="text-muted-foreground">No exams finalized yet.</p>
             <Button asChild className="mt-4">
               <Link to="/dashboard/create-exam">Create Your First Exam</Link>
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4">
           {exams.map((exam) => (
-            <Card key={exam.id}>
-              <CardHeader>
-                <CardTitle className="text-lg">{exam.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>Questions: {exam.questions.length}</p>
-                  <p>Total Marks: {exam.totalMarks}</p>
-                  {exam.duration && <p>Duration: {exam.duration} min</p>}
-                </div>
-                <div className="flex gap-2 mt-4">
-                  <Button size="sm" variant="outline">View</Button>
+            <Card key={exam._id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold mb-2">{exam.title}</h3>
+
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <FileText className="h-4 w-4" />
+                        <span>{exam.subject}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium">{exam.totalMarks} marks</span>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <span>{exam.duration} mins</span>
+                      </div>
+                    </div>
+
+                    {exam.status && (
+                      <div className="mt-2">
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${exam.status === 'finalized'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                          }`}>
+                          {exam.status.charAt(0).toUpperCase() + exam.status.slice(1)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 ml-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <Link to={`/dashboard/exams/${exam._id}`}>
+                        <FileText className="h-4 w-4 mr-1" />
+                        View
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(exam._id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -146,10 +385,48 @@ function MyExamsPage() {
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setCurrentUser(data.user);
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/');
+  };
+
+  const getUserInitials = () => {
+    if (!currentUser?.name) return 'T';
+    return currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
+      {/* Profile Dialog */}
+      <ProfileDialog
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
+        currentUser={currentUser}
+        onProfileUpdate={fetchUserData}
+      />
+
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-card border-r border-border transition-transform lg:relative lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-16 items-center gap-2 border-b border-border px-6">
@@ -166,9 +443,8 @@ export default function Dashboard() {
               <Link
                 key={item.path}
                 to={item.path}
-                onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive
-                  ? 'bg-primary/10 text-primary'
+                  ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
               >
@@ -180,22 +456,16 @@ export default function Dashboard() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
-          <Button variant="ghost" className="w-full justify-start text-muted-foreground" asChild>
-            <Link to="/">
-              <LogOut className="mr-2 h-4 w-4" />
-              Log Out
-            </Link>
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-muted-foreground"
+            onClick={handleLogout}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
           </Button>
         </div>
       </aside>
-
-      {/* Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -207,9 +477,32 @@ export default function Dashboard() {
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex-1" />
+
+          {/* Profile Menu */}
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-sm font-medium text-primary">T</span>
+            <div className="relative group">
+              <button className="flex items-center gap-2 hover:bg-accent rounded-lg p-2 transition-colors">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-sm font-medium text-primary">{getUserInitials()}</span>
+                </div>
+                <div className="hidden sm:block text-left">
+                  <p className="text-sm font-medium">{currentUser?.name || 'Teacher'}</p>
+                  <p className="text-xs text-muted-foreground">{currentUser?.email}</p>
+                </div>
+              </button>
+
+              {/* Dropdown Menu */}
+              <div className="absolute right-0 mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 bg-card border border-border rounded-lg shadow-lg">
+                <div className="p-2">
+                  <button
+                    onClick={() => setProfileOpen(true)}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded hover:bg-accent transition-colors"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Edit Profile
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </header>
@@ -219,6 +512,8 @@ export default function Dashboard() {
             <Route index element={<DashboardOverview />} />
             <Route path="create-exam" element={<CreateExamPage />} />
             <Route path="exams" element={<MyExamsPage />} />
+            <Route path="exams/:examId" element={<ExamViewPage />} />
+            <Route path="students" element={<MyStudentsPage />} />
           </Routes>
         </main>
       </div>

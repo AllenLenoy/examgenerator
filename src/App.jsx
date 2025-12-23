@@ -10,6 +10,7 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import StudentDashboard from "./pages/dashboard/StudentDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import ExamAttempt from "./pages/ExamAttempt";
+import { ExamAttemptPage } from "./components/exam/ExamAttemptPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['student']}>
                   <ExamAttempt />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/exam/:assignmentId"
+              element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <ExamAttemptPage />
                 </ProtectedRoute>
               }
             />

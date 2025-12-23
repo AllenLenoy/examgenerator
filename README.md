@@ -1,37 +1,46 @@
 # 🎓 ExamGenie - Advanced Exam Management System
 
-A comprehensive full-stack examination management platform with role-based access control, automated grading, and AI-powered question generation.
+A comprehensive full-stack examination management platform with role-based access control, automated grading, AI-powered question generation, and **exam assignment workflow**.
 
 [![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=flat&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![Express.js](https://img.shields.io/badge/Express.js-404D59?style=flat)](https://expressjs.com/)
 [![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-43853D?style=flat&logo=node.js&logoColor=white)](https://nodejs.org/)
 
+## ✨ **NEW:** Complete Exam Assignment System
+
+✅ Teachers can assign exams to students  
+✅ Students take exams with real-time interface  
+✅ Automatic scoring and instant results  
+✅ Full exam lifecycle management  
+
+---
+
 ## 📋 Table of Contents
 - [Overview](#overview)
 - [Key Features](#key-features)
 - [System Architecture](#system-architecture)
 - [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
 - [Installation](#installation)
-- [Environment Setup](#environment-setup)
 - [Usage](#usage)
 - [API Documentation](#api-documentation)
-- [Future Enhancements](#future-enhancements)
+- [Project Status](#project-status)
 - [Contributing](#contributing)
 
 ---
 
 ## 🎯 Overview
 
-**ExamGenie** is a production-ready, role-based examination management system designed for educational institutions. It supports three distinct user roles (Admin, Teacher, Student) with complete workflows for question bank management, exam creation, automated grading, and comprehensive analytics.
+**ExamGenie** is a production-ready, role-based examination management system designed for educational institutions. It supports three distinct user roles (Admin, Teacher, Student) with complete workflows for question bank management, exam creation, **exam assignment**, automated grading, and comprehensive analytics.
 
-### What is ExamGenie Used For?
+### What's New in v2.0
 
-- **Educational Institutions**: Schools, colleges, and universities
-- **Online Training Platforms**: Corporate training and certification
-- **Assessment Centers**: Standardized testing environments
-- **Remote Learning**: Distance education and e-learning platforms
+🎉 **Complete Assignment Workflow**
+- Teachers assign exams to specific students
+- Students view assigned exams in real-time
+- Exam attempt page with progress tracking
+- Instant scoring and results display
+- Assignment history and analytics
 
 ---
 
@@ -59,8 +68,11 @@ A comprehensive full-stack examination management platform with role-based acces
 - **Exam Creation**: Build exams with rule-based question selection
   - Define topics and difficulty levels
   - Set duration and total marks
-  - Assign to specific students
-- **Student Management**: View assigned students
+- **🆕 Exam Assignment**: 
+  - Assign exams to specific students
+  - Dialog-based assignment interface
+  - Track assignment status
+- **Student Management**: View assigned students with actions
 - **Results Analytics**: 
   - Individual student performance
   - Class-wide statistics
@@ -68,23 +80,27 @@ A comprehensive full-stack examination management platform with role-based acces
 - **AI-Powered**: Generate questions using AI (Mistral 7B via OpenRouter)
 
 ### 👨‍🎓 Student Portal
-- **Exam Access**: View all assigned exams
-- **Exam Attempts**: 
-  - Start exam with randomized questions
-  - Timed exam interface
-  - Submit answers for automatic grading
-- **Results**: 
-  - Instant score calculation
-  - Detailed answer review
-  - Performance history
-- **Prevent Cheating**: One-time attempt per exam
+- **🆕 Assigned Exams Dashboard**: View all assigned exams in real-time
+- **🆕 Exam Attempt Interface**: 
+  - Clean, modern exam-taking interface
+  - Progress bar showing answered questions
+  - No timer (take as long as needed)
+  - Radio button selection for answers
+  - One-click submission
+- **🆕 Instant Results**: 
+  - Score, percentage, and breakdown
+  - Correct answers count
+  - Results saved in My Results section
+- **Results History**: View all completed exam results
+- **One-time Attempts**: Prevent re-taking exams
 
 ### 🤖 Advanced Features
 - **Auto-Grading**: Instant scoring on exam submission
 - **Question Randomization**: Unique question sets per student
-- **PDF Generation**: Export exam papers
+- **Assignment System**: Complete lifecycle from assignment to results
 - **Real-time Updates**: Hot Module Replacement (HMR)
 - **Responsive Design**: Works on desktop, tablet, and mobile
+- **Clean Codebase**: Recently cleaned up (~500 lines of dead code removed)
 
 ---
 
@@ -100,28 +116,22 @@ A comprehensive full-stack examination management platform with role-based acces
 │  │Dashboard │  │ Portal   │  │ Portal   │     │
 │  └──────────┘  └──────────┘  └──────────┘     │
 │                                                 │
-│  ┌──────────────────────────────────────────┐  │
-│  │     Protected Routes + JWT Auth          │  │
-│  └──────────────────────────────────────────┘  │
+│  🆕 Assignment Features:                        │
+│  • AssignTestDialog (Teacher)                   │
+│  • ExamAttemptPage (Student)                    │
+│  • My Results (Student)                         │
 └──────────────────┬──────────────────────────────┘
-                   │ REST API
+                   │ REST API  
 ┌──────────────────▼──────────────────────────────┐
 │          Backend (Express.js + Node.js)         │
 │                  Port: 5000                     │
 ├─────────────────────────────────────────────────┤
-│  ┌──────────────────────────────────────────┐  │
-│  │   Auth Middleware (JWT Verification)     │  │
-│  └──────────────────────────────────────────┘  │
-│                                                 │
-│  ┌────────┐  ┌────────┐  ┌────────┐           │
-│  │ Admin  │  │Teacher │  │Student │           │
-│  │  API   │  │  API   │  │  API   │           │
-│  │(9 eps) │  │(11 eps)│  │(5 eps) │           │
-│  └────────┘  └────────┘  └────────┘           │
-│                                                 │
-│  ┌──────────────────────────────────────────┐  │
-│  │     Business Logic & Controllers         │  │
-│  └──────────────────────────────────────────┘  │
+│  🆕 Assignment Routes:                          │
+│  • POST /api/teacher/assignments               │
+│  • GET  /api/student/assignments               │
+│  • POST /api/student/assignments/:id/start     │
+│  • POST /api/student/assignments/:id/submit    │
+│  • GET  /api/student/assignments/:id/result    │
 └──────────────────┬──────────────────────────────┘
                    │ Mongoose ODM
 ┌──────────────────▼──────────────────────────────┐
@@ -132,6 +142,7 @@ A comprehensive full-stack examination management platform with role-based acces
 │  • users         (Admin, Teacher, Student)      │
 │  • questions     (Question Bank)                │
 │  • examtemplates (Exam Blueprints)              │
+│  • assignments   🆕 (Assigned Exams)            │
 │  • attempts      (Student Submissions)          │
 └─────────────────────────────────────────────────┘
 ```
@@ -144,12 +155,11 @@ A comprehensive full-stack examination management platform with role-based acces
 - **Framework**: React 18.3
 - **Build Tool**: Vite 5.4
 - **Routing**: React Router DOM 6.30
-- **State Management**: React Query (TanStack Query)
-- **UI Components**: Radix UI primitives
+- **State Management**: React Hooks + Context API
+- **UI Components**: Shadcn UI (Radix UI primitives)
 - **Styling**: Tailwind CSS 3.4
-- **Forms**: React Hook Form + Zod validation
 - **Icons**: Lucide React
-- **HTTP Client**: Axios
+- **HTTP Client**: Fetch API with JWT auth
 
 ### Backend
 - **Runtime**: Node.js 23.6
@@ -159,99 +169,11 @@ A comprehensive full-stack examination management platform with role-based acces
 - **Password Hashing**: bcryptjs 3.0
 - **Environment**: dotenv
 - **CORS**: CORS middleware
-- **PDF Generation**: PDFKit
 
 ### AI Integration
 - **Model**: Mistral 7B Instruct
 - **Provider**: OpenRouter API
 - **Use Case**: Automated question generation
-
----
-
-## 📁 Project Structure
-
-### Main Files & Their Purpose
-
-```
-exam-genie/
-│
-├── 📂 backend/                      # Backend server
-│   ├── 📂 src/
-│   │   ├── 📂 config/
-│   │   │   └── database.js          # MongoDB connection setup
-│   │   │
-│   │   ├── 📂 models/               # Database schemas
-│   │   │   ├── User.js              # User model (Admin/Teacher/Student)
-│   │   │   ├── Question.js          # Question bank model
-│   │   │   ├── ExamTemplate.js      # Exam blueprint model
-│   │   │   └── Attempt.js           # Student exam attempt model
-│   │   │
-│   │   ├── 📂 middleware/
-│   │   │   └── auth.js              # JWT authentication middleware
-│   │   │
-│   │   ├── 📂 routes/               # API endpoints
-│   │   │   ├── auth.routes.js       # Authentication (login/register)
-│   │   │   ├── admin.routes.js      # Admin API (9 endpoints)
-│   │   │   ├── teacher.routes.js    # Teacher API (11 endpoints)
-│   │   │   ├── student.routes.js    # Student API (5 endpoints)
-│   │   │   ├── ai.routes.js         # AI question generation
-│   │   │   ├── exam.routes.js       # PDF generation
-│   │   │   └── health.routes.js     # Health check
-│   │   │
-│   │   ├── 📂 scripts/
-│   │   │   └── seed.js              # Database seeding script
-│   │   │
-│   │   ├── app.js                   # Express app configuration
-│   │   └── server.js                # Server entry point
-│   │
-│   ├── .env                         # Environment variables (NOT in repo)
-│   ├── .env.example                 # Environment template
-│   └── package.json                 # Backend dependencies
-│
-├── 📂 src/                          # Frontend source
-│   ├── 📂 components/
-│   │   ├── ProtectedRoute.jsx       # Route protection component
-│   │   ├── 📂 ui/                   # Reusable UI components (Radix)
-│   │   └── 📂 exam/                 # Exam-related components
-│   │       ├── ExamGenerator.jsx    # Exam creation form
-│   │       ├── ExamPreview.jsx      # Exam preview display
-│   │       └── AIQuestionGenerator.jsx  # AI question UI
-│   │
-│   ├── 📂 pages/                    # Page components
-│   │   ├── Auth.jsx                 # Login/Signup page
-│   │   ├── Home.jsx                 # Landing page
-│   │   ├── 📂 dashboard/
-│   │   │   ├── AdminDashboard.jsx   # Admin panel (complete)
-│   │   │   ├── Dashboard.jsx        # Teacher panel (needs migration)
-│   │   │   └── StudentDashboard.jsx # Student panel (needs migration)
-│   │   └── ExamAttempt.jsx          # Exam taking interface
-│   │
-│   ├── 📂 lib/
-│   │   ├── api.js                   # Axios instance + interceptors
-│   │   └── apiService.js            # All API endpoints (25 methods)
-│   │
-│   ├── 📂 context/
-│   │   └── QuestionBankContext.jsx  # Global state for questions
-│   │
-│   ├── App.jsx                      # Main app + routing
-│   ├── main.jsx                     # React entry point
-│   └── index.css                    # Global styles
-│
-├── vite.config.js                   # Vite configuration (port 8080)
-├── tailwind.config.js               # Tailwind CSS config
-├── package.json                     # Frontend dependencies
-└── README.md                        # This file
-```
-
-### Key Configuration Files
-
-| File | Purpose |
-|------|---------|
-| `backend/.env` | MongoDB URI, JWT secret, API keys |
-| `vite.config.js` | Frontend dev server (port 8080) |
-| `backend/src/app.js` | Express middleware & route registration |
-| `src/App.jsx` | Frontend routing & protected routes |
-| `src/lib/apiService.js` | Centralized API calls (25 endpoints) |
 
 ---
 
@@ -263,127 +185,140 @@ exam-genie/
 - Git
 - npm or yarn
 
-### Step 1: Clone Repository
+### Quick Start
+
+1. **Clone Repository**
 ```bash
 git clone https://github.com/AllenLenoy/examgenerator.git
 cd examgenerator
 ```
 
-### Step 2: Install Dependencies
-
-**Backend:**
+2. **Install Backend Dependencies**
 ```bash
 cd backend
 npm install
 ```
 
-**Frontend:**
+3. **Configure Backend Environment**
+Create `backend/.env`:
+```env
+MONGODB_URI=mongodb://localhost:27017/exam-genie
+JWT_SECRET=your-super-secret-jwt-key-change-this
+JWT_EXPIRE=24h
+PORT=5000
+NODE_ENV=development
+OPENROUTER_API_KEY=your-openrouter-api-key  # Optional
+```
+
+4. **Install Frontend Dependencies**
 ```bash
 cd ..  # Back to root
 npm install
 ```
 
----
-
-## ⚙️ Environment Setup
-
-### Backend Environment Variables
-
-Create `backend/.env` file:
-
-```env
-# Database
-MONGODB_URI=mongodb://localhost:27017/exam-genie
-# Or use MongoDB Atlas:
-# MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/exam-genie
-
-# JWT Authentication
-JWT_SECRET=your-super-secret-jwt-key-change-this
-JWT_EXPIRE=24h
-
-# Server
-PORT=5000
-NODE_ENV=development
-
-# AI API (Optional - for question generation)
-OPENROUTER_API_KEY=your-openrouter-api-key
-```
-
-### Frontend Configuration
-
-Frontend uses Vite with port **8080** (configured in `vite.config.js`).
-
----
-
-## 🎮 Usage
-
-### Start Development Servers
+5. **Start Development Servers**
 
 **Terminal 1 - Backend:**
 ```bash
 cd backend
 npm run dev
 ```
-Server runs on `http://localhost:5000`
+✅ Server runs on `http://localhost:5000`
 
 **Terminal 2 - Frontend:**
 ```bash
 # In project root
 npm run dev
 ```
-Frontend runs on `http://localhost:8080`
+✅ Frontend runs on `http://localhost:8080`
 
-### Create First Admin User
+6. **Access the Application**
+Navigate to `http://localhost:8080`
 
-**Option A: Seed Database**
+---
+
+## 🎮 Usage
+
+### First Time Setup
+
+#### Option A: Seed Database (Recommended)
 ```bash
 cd backend
 node src/scripts/seed.js
 ```
 Creates test users and sample questions.
 
-**Option B: Register via UI**
-1. Go to `http://localhost:8080/auth`
-2. Click "Sign Up"
-3. Create admin account
-4. Login and start using the system
-
-### Default Seed Credentials
-
-If you ran the seed script:
+**Default Credentials:**
 - **Admin**: admin@examgenie.com / admin123
 - **Teacher**: teacher@examgenie.com / teacher123
 - **Student**: student@examgenie.com / student123
+
+#### Option B: Manual Registration
+1. Go to `http://localhost:8080/auth`
+2. Click \"Sign Up\"
+3. Create accounts for each role
+
+### Typical Workflow
+
+1. **Admin Login**
+   - Assign students to teachers
+   - Monitor system statistics
+
+2. **Teacher Login**
+   - Create questions in Question Bank
+   - Generate exam using AI or manual selection
+   - Finalize exam template
+   - Go to \"My Students\"
+   - Click \"Assign Test\" next to a student
+   - Select exam and assign
+
+3. **Student Login**
+   - View assigned exams in dashboard
+   - Click \"Start Exam\"
+   - Answer questions
+   - Submit exam
+   - View instant results
+   - Check \"My Results\" for history
 
 ---
 
 ## 📡 API Documentation
 
-### Authentication Endpoints
+### 🆕 Assignment Endpoints
 
+**Teacher Assignment Routes:**
+```
+POST   /api/teacher/assignments        # Assign exam to student(s)
+GET    /api/teacher/assignments        # View all assignments created
+```
+
+**Student Assignment Routes:**
+```
+GET    /api/student/assignments                # Get all assigned exams
+POST   /api/student/assignments/:id/start      # Start exam attempt
+POST   /api/student/assignments/:id/submit     # Submit answers
+GET    /api/student/assignments/:id/result     # View results
+```
+
+### Authentication Endpoints
 ```
 POST   /api/auth/register      # Create new user
 POST   /api/auth/login         # Login (returns JWT token)
 GET    /api/auth/me            # Get current user
-POST   /api/auth/logout        # Logout (client-side)
+PUT    /api/auth/profile       # Update user profile
 ```
 
-### Admin Endpoints (Requires admin role)
-
+### Admin Endpoints
 ```
 GET    /api/admin/dashboard           # System statistics
 GET    /api/admin/users               # List all users
 POST   /api/admin/users               # Create user
 PUT    /api/admin/users/:id           # Update user
-DELETE /api/admin/users/:id           # Soft delete user
-POST   /api/admin/users/:id/toggle-status  # Activate/deactivate
+DELETE /api/admin/users/:id           # Delete user
 POST   /api/admin/assign-students     # Assign students to teacher
-GET    /api/admin/questions/stats     # Question bank stats
-GET    /api/admin/exams/stats         # Exam stats
 ```
 
-### Teacher Endpoints (Requires teacher role)
-
+### Teacher Endpoints
 ```
 GET    /api/teacher/questions         # View own questions
 POST   /api/teacher/questions         # Create question
@@ -391,67 +326,79 @@ PUT    /api/teacher/questions/:id     # Update question
 DELETE /api/teacher/questions/:id     # Delete question
 GET    /api/teacher/exams             # View own exams
 POST   /api/teacher/exams             # Create exam
-PUT    /api/teacher/exams/:id         # Update exam
-DELETE /api/teacher/exams/:id         # Delete exam
 GET    /api/teacher/students          # View assigned students
-GET    /api/teacher/results           # All results
-GET    /api/teacher/results/:examId   # Specific exam results
-```
-
-### Student Endpoints (Requires student role)
-
-```
-GET    /api/student/exams                    # Assigned exams
-GET    /api/student/attempts                 # Attempt history
-GET    /api/student/attempts/:attemptId     # Specific attempt
-POST   /api/student/attempts/:examId/start  # Start exam
-POST   /api/student/attempts/:attemptId/submit  # Submit answers
+POST   /api/ai/generate-questions     # AI question generation
 ```
 
 ---
 
-## 🔮 Future Enhancements
+## 📊 Project Status
 
-### Planned Features
+### ✅ Completed Features
 
-#### 🎯 Phase 1 (Q1 2025)
-- [ ] **Email Verification**: Send verification emails on signup
-- [ ] **Password Reset**: Forgot password flow
-- [ ] **User Profile**: Edit profile, change password
-- [ ] **Student Assignment UI**: Admin interface for assigning students
-- [ ] **User Edit Modal**: Edit existing users in admin panel
-- [ ] **Export Results**: CSV/Excel export for analytics
-- [ ] **Dark Mode**: Theme switcher
+- [x] User authentication (JWT)
+- [x] Role-based access control
+- [x] Admin dashboard with user management
+- [x] Teacher question bank CRUD
+- [x] AI-powered question generation
+- [x] Exam template creation
+- [x] **Exam assignment system** 🆕
+- [x] **Student exam attempt interface** 🆕
+- [x] **Instant auto-grading** 🆕
+- [x] **Results tracking** 🆕
+- [x] Clean, organized codebase
 
-#### 🚀 Phase 2 (Q2 2025)
-- [ ] **Advanced Analytics**: Charts, graphs, trend analysis
-- [ ] **Exam Scheduling**: Schedule exams for future dates
-- [ ] **Timed Exams**: Auto-submit on time expiry
-- [ ] **Question Pool**: Share questions between teachers
-- [ ] **Multi-language Support**: i18n implementation
-- [ ] **File Uploads**: Support image questions
-- [ ] **Notifications**: Real-time alerts for assignments
+### 🔄 In Progress
 
-#### 💎 Phase 3 (Q3 2025)
-- [ ] **Video Proctoring**: AI-based exam monitoring
-- [ ] **Plagiarism Detection**: Answer similarity checking
-- [ ] **Mobile App**: React Native companion app
-- [ ] **LMS Integration**: Moodle, Canvas integration
-- [ ] **Advanced Question Types**: Essay, fill-in-blank, matching
-- [ ] **Adaptive Testing**: Difficulty adjusts based on performance
-- [ ] **Blockchain Certificates**: Immutable exam certificates
+- [ ] Timed exams (timer currently removed)
+- [ ] Bulk student assignment
+- [ ] Enhanced analytics dashboard
 
-### Upcoming Capabilities
+### 📋 Planned Features
 
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| **Real-time Collaboration** | Multiple teachers co-create exams | Medium |
-| **Gamification** | Badges, leaderboards for students | Low |
-| **Offline Mode** | PWA with offline capabilities | High |
-| **Question Versioning** | Track question edit history | Medium |
-| **Bulk Import** | Import questions from CSV/Excel | High |
-| **Custom Themes** | Institutional branding | Low |
-| **API Webhooks** | Integration with external systems | Medium |
+#### High Priority
+- [ ] Email notifications for assignments
+- [ ] Exam scheduling with deadlines
+- [ ] Export results to CSV/Excel
+- [ ] Question review after exam
+- [ ] Partial progress saving
+
+#### Medium Priority
+- [ ] Dark mode
+- [ ] Advanced search/filters
+- [ ] Bulk question import
+- [ ] User profile editing
+- [ ] Password reset flow
+
+#### Future Enhancements
+- [ ] Video proctoring
+- [ ] Mobile app (React Native)
+- [ ] Question versioning
+- [ ] Collaborative exam creation
+- [ ] Integration with LMS platforms
+
+---
+
+## 🧹 Recent Updates
+
+### Version 2.0 (December 2024)
+
+**✅ Major Features Added:**
+- Complete exam assignment workflow
+- Student exam attempt interface
+- Instant results and scoring
+- Assignment history tracking
+
+**✅ Code Cleanup:**
+- Removed ~500 lines of dead code
+- Deleted obsolete in-memory database files
+- Removed duplicate components
+- Organized file structure
+
+**✅ Bug Fixes:**
+- Fixed navigation routing
+- Resolved import errors
+- Improved error handling
 
 ---
 
@@ -465,19 +412,6 @@ Contributions are welcome! Please follow these steps:
 4. Push to branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-### Development Guidelines
-
-- Follow existing code style
-- Write meaningful commit messages
-- Add tests for new features
-- Update documentation as needed
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
 ---
 
 ## 👨‍💻 Author
@@ -488,23 +422,10 @@ This project is licensed under the MIT License.
 
 ---
 
-## 🙏 Acknowledgments
+## 📄 License
 
-- React Team for amazing framework
-- MongoDB for flexible database
-- OpenRouter for AI API access
-- Radix UI for accessible components
-- Tailwind CSS for utility-first styling
+This project is licensed under the MIT License.
 
 ---
 
-## 📞 Support
-
-For issues and questions:
-- Open an issue on GitHub
-- Check existing documentation
-- Review API endpoints above
-
----
-
-**Built with ❤️ using MERN Stack**
+**Built with ❤️ using MERN Stack + Shadcn UI**
